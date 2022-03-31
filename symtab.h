@@ -4,12 +4,11 @@
         Student Version
 **********************************************/
 
-
 #ifndef SYMTAB_H
 #define SYMTAB_H
 
-#include <string.h>
 #include "attr.h"
+#include <string.h>
 
 /* The symbol table implementation uses a single hash     */
 /* function. Starting from the hashed position, entries   */
@@ -21,20 +20,15 @@
 typedef struct { /* need to augment this */
   char *name;
   int offset;
-  Type_Expression type;  
+  Type_Expression type;
 } SymTabEntry;
 
-extern
-void InitSymbolTable();
+extern void InitSymbolTable();
 
-extern
-SymTabEntry * lookup(char *name);
+extern SymTabEntry *lookup(char *name);
 
-extern
-void insert(char *name, Type_Expression type, int offset);
+extern void insert(char *name, Type_Expression type, int offset);
 
-extern
-void PrintSymbolTable();
-
+extern void PrintSymbolTable();
 
 #endif
