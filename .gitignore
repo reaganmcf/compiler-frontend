@@ -8,4 +8,4 @@ parse.tab.c
 parse.tab.h
 parse.tab.o
 symtab.o
-
+iloc.out
