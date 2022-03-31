@@ -1,0 +1,7 @@
+program main;
+var a, b: integer;
+    b, a: array[100] of boolean;
+    c, d: integer;
+begin
+  a := b + 1
+end.

@@ -1,0 +1,18 @@
+program main;
+var a, b, c: integer; 
+begin
+  a := 1;
+  b := 10;
+  c := 0;
+  if a < 10 then
+  begin
+    c := c + 1;
+    b := b + 1
+  end
+  else
+    b := b + 2
+  fi;
+  print(a);
+  print(b);
+  print(c)
+end.

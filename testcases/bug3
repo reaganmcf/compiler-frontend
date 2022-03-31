@@ -1,0 +1,9 @@
+program main;
+var i, a, b: integer;
+begin
+  if FALSE < TRUE then
+     a := b + 1
+  else
+     a := b - 1
+  fi   
+end.

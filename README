@@ -1,0 +1,14 @@
+
+Spring 2022
+
+The file SourceLangugeBNF.txt lists the context free grammar for the project. These rules
+have been specified in file parse.y given to you.
+
+Example call of your compiler:
+ ./codegen < testcases/demo1
+
+ ./sol-codegen < testcases/demo1 provides a sample solution
+
+Both compilers generate an ILOC file in iloc.out
+
+The subdirectory "testcases" contains a set of input programs you can use to develop your compiler.

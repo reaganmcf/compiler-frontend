@@ -1,0 +1,5 @@
+program main;
+begin
+print (7);
+print(424242)
+end.

@@ -1,0 +1,5 @@
+program main;
+begin
+print (FALSE);
+print (TRUE)
+end.

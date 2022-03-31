@@ -1,0 +1,80 @@
+==============================================================
+                CS 415, Spring 2022
+BNF grammar specification for our input language for project 2
+==============================================================
+
+
+program : PROG ID ';' block PERIOD 
+
+block	: variables cmpdstmt 
+
+variables: /* empty */
+	| VAR vardcls 
+
+vardcls	: vardcls vardcl ';' 
+	| vardcl ';' 
+
+vardcl	: idlist ':' type 
+
+idlist	: idlist ',' ID 
+        | ID		
+
+type	: ARRAY '[' ICONST ']' OF stype 
+        | stype 
+
+stype	: INT 
+        | BOOL 
+
+stmtlist : stmtlist ';' stmt 
+	 | stmt 
+
+stmt    : ifstmt 
+	| fstmt 
+	| wstmt 
+	| astmt 
+	| writestmt 
+	| cmpdstmt 
+
+cmpdstmt: BEG stmtlist END 
+
+ifstmt :  ifhead THEN stmt ELSE stmt FI 
+
+ifhead : IF condexp 
+
+writestmt: PRINT '(' exp ')' 
+
+fstmt	: FOR ctrlexp DO stmt ENDFOR  
+
+wstmt	: WHILE condexp DO stmt ENDWHILE  
+
+astmt : lhs ASG exp            
+
+lhs	: ID	
+        | ID '[' exp ']' 
+
+exp	: exp '+' exp	
+        | exp '-' exp
+        | exp '*' exp	
+        | exp AND exp
+        | exp OR exp 
+        | ID	
+        | ID '[' exp ']'
+ 	| ICONST   
+	| TRUE     
+        | FALSE    
+
+ctrlexp : ID ASG ICONST ',' ICONST 
+
+condexp	: exp NEQ exp	
+        | exp EQ exp	
+        | exp LT exp	
+        | exp LEQ exp	
+        | exp GT exp	
+        | exp GEQ exp	
+
+
+
+
+
+
+
