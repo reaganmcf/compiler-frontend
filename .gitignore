@@ -1,0 +1,11 @@
+attr.o
+codegen
+instrutil.o
+lex.yy.c
+lex.yy.o
+parse.output
+parse.tab.c
+parse.tab.h
+parse.tab.o
+symtab.o
+
