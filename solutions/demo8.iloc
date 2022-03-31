@@ -1,0 +1,43 @@
+	// Assign STATIC_AREA_ADDRESS to register "r0"
+ 	 loadI 1024 	=> r0 
+	// Compute address of variable "a" at offset 0 in register 2
+ 	 loadI 0 	=> r1 
+ 	 add r0, r1 	=> r2 
+ 	 loadI 1 	=> r3 
+ 	 store r3 	=> r2 
+	// Compute address of variable "b" at offset 4 in register 5
+ 	 loadI 4 	=> r4 
+ 	 add r0, r4 	=> r5 
+ 	 loadI 10 	=> r6 
+ 	 store r6 	=> r5 
+L0:	 nop 
+	// Control code for "WHILE DO"
+ 	 loadI 1 	=> r7 
+ 	 loadI 1 	=> r8 
+ 	 cmp_NE r7, r8 	=> r9
+ 	 cbr r9 	=> L1, L2
+L1:	 nop 
+	// Body of "WHILE" construct starts here
+	// Compute address of variable "a" at offset 0 in register 11
+ 	 loadI 0 	=> r10 
+ 	 add r0, r10 	=> r11 
+	// Load RHS value of variable "a" at offset 0
+ 	 loadAI r0, 0 	=> r12 
+ 	 loadI 2 	=> r13 
+ 	 add r12, r13 	=> r14 
+ 	 store r14 	=> r11 
+	// Compute address of variable "b" at offset 4 in register 16
+ 	 loadI 4 	=> r15 
+ 	 add r0, r15 	=> r16 
+	// Load RHS value of variable "b" at offset 4
+ 	 loadAI r0, 4 	=> r17 
+ 	 loadI 1 	=> r18 
+ 	 add r17, r18 	=> r19 
+ 	 store r19 	=> r16 
+ 	 br L0
+L2:	 nop 
+	// Load RHS value of variable "a" at offset 0
+ 	 loadAI r0, 0 	=> r20 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r20 	=> r0, -4 
+ 	 outputAI r0, -4

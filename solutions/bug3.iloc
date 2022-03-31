@@ -1,0 +1,29 @@
+	// Assign STATIC_AREA_ADDRESS to register "r0"
+ 	 loadI 1024 	=> r0 
+ 	 loadI 0 	=> r1 
+ 	 loadI 1 	=> r2 
+ 	 cmp_LT r1, r2 	=> r3
+ 	 cbr r3 	=> L0, L1
+L0:	 nop 
+	// This is the "true" branch
+	// Compute address of variable "a" at offset 4 in register 5
+ 	 loadI 4 	=> r4 
+ 	 add r0, r4 	=> r5 
+	// Load RHS value of variable "b" at offset 8
+ 	 loadAI r0, 8 	=> r6 
+ 	 loadI 1 	=> r7 
+ 	 add r6, r7 	=> r8 
+ 	 store r8 	=> r5 
+	// Branch to statement following the "else" statement list
+ 	 br L2
+L1:	 nop 
+	// This is the "false" branch
+	// Compute address of variable "a" at offset 4 in register 10
+ 	 loadI 4 	=> r9 
+ 	 add r0, r9 	=> r10 
+	// Load RHS value of variable "b" at offset 8
+ 	 loadAI r0, 8 	=> r11 
+ 	 loadI 1 	=> r12 
+ 	 sub r11, r12 	=> r13 
+ 	 store r13 	=> r10 
+L2:	 nop 

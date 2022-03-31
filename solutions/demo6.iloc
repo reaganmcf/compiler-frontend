@@ -1,0 +1,78 @@
+	// Assign STATIC_AREA_ADDRESS to register "r0"
+ 	 loadI 1024 	=> r0 
+	// Compute address of variable "a" at offset 0 in register 2
+ 	 loadI 0 	=> r1 
+ 	 add r0, r1 	=> r2 
+ 	 loadI 1 	=> r3 
+ 	 store r3 	=> r2 
+	// Compute address of variable "b" at offset 4 in register 5
+ 	 loadI 4 	=> r4 
+ 	 add r0, r4 	=> r5 
+ 	 loadI 2 	=> r6 
+ 	 store r6 	=> r5 
+	// Compute address of variable "c" at offset 8 in register 8
+ 	 loadI 8 	=> r7 
+ 	 add r0, r7 	=> r8 
+ 	 loadI 3 	=> r9 
+ 	 store r9 	=> r8 
+	// Compute address of variable "d" at offset 12 in register 11
+ 	 loadI 12 	=> r10 
+ 	 add r0, r10 	=> r11 
+ 	 loadI 4 	=> r12 
+ 	 store r12 	=> r11 
+	// Compute address of variable "e" at offset 16 in register 14
+ 	 loadI 16 	=> r13 
+ 	 add r0, r13 	=> r14 
+	// Load RHS value of variable "a" at offset 0
+ 	 loadAI r0, 0 	=> r15 
+	// Load RHS value of variable "b" at offset 4
+ 	 loadAI r0, 4 	=> r16 
+	// Load RHS value of variable "c" at offset 8
+ 	 loadAI r0, 8 	=> r17 
+ 	 mult r16, r17 	=> r18 
+ 	 add r15, r18 	=> r19 
+	// Load RHS value of variable "b" at offset 4
+ 	 loadAI r0, 4 	=> r20 
+	// Load RHS value of variable "c" at offset 8
+ 	 loadAI r0, 8 	=> r21 
+ 	 mult r20, r21 	=> r22 
+ 	 add r19, r22 	=> r23 
+	// Load RHS value of variable "c" at offset 8
+ 	 loadAI r0, 8 	=> r24 
+	// Load RHS value of variable "b" at offset 4
+ 	 loadAI r0, 4 	=> r25 
+ 	 mult r24, r25 	=> r26 
+ 	 add r23, r26 	=> r27 
+	// Load RHS value of variable "a" at offset 0
+ 	 loadAI r0, 0 	=> r28 
+ 	 add r27, r28 	=> r29 
+ 	 store r29 	=> r14 
+	// Load RHS value of variable "e" at offset 16
+ 	 loadAI r0, 16 	=> r30 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r30 	=> r0, -4 
+ 	 outputAI r0, -4
+	// Compute address of variable "f" at offset 20 in register 32
+ 	 loadI 20 	=> r31 
+ 	 add r0, r31 	=> r32 
+ 	 loadI 1 	=> r33 
+ 	 store r33 	=> r32 
+	// Compute address of variable "g" at offset 24 in register 35
+ 	 loadI 24 	=> r34 
+ 	 add r0, r34 	=> r35 
+ 	 loadI 0 	=> r36 
+	// Load RHS value of variable "f" at offset 20
+ 	 loadAI r0, 20 	=> r37 
+ 	 or r36, r37 	=> r38 
+ 	 loadI 1 	=> r39 
+ 	 and r38, r39 	=> r40 
+ 	 store r40 	=> r35 
+	// Load RHS value of variable "g" at offset 24
+ 	 loadAI r0, 24 	=> r41 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r41 	=> r0, -4 
+ 	 outputAI r0, -4
+ 	 loadI 0 	=> r42 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r42 	=> r0, -4 
+ 	 outputAI r0, -4

@@ -1,0 +1,10 @@
+	// Assign STATIC_AREA_ADDRESS to register "r0"
+ 	 loadI 1024 	=> r0 
+ 	 loadI 0 	=> r1 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r1 	=> r0, -4 
+ 	 outputAI r0, -4
+ 	 loadI 1 	=> r2 
+	// Code for "PRINT" from offset -4
+ 	 storeAI r2 	=> r0, -4 
+ 	 outputAI r0, -4
