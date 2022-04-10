@@ -23,4 +23,11 @@ typedef struct {
   int targetRegister;
 } regInfo;
 
+typedef struct {
+  char** ids;
+  int count;
+} idlistInfo;
+
+void add_id_to_idlist(idlistInfo* idlist, char* id);
+
 #endif

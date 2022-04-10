@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
 #include "attr.h"
 #include "instrutil.h"
 int yylex();
@@ -14,6 +15,7 @@ char *CommentBuffer;
 %union {
   tokentype token;
   regInfo targetReg;
+  idlistInfo idlist;
 }
 
 %token PROG PERIOD VAR 
@@ -26,6 +28,7 @@ char *CommentBuffer;
 
 %type <targetReg> exp 
 %type <targetReg> lhs 
+%type <idlist> idlist;
 
 %start program
 
@@ -52,15 +55,37 @@ variables: /* empty */
 	;
 
 vardcls	: vardcls vardcl ';' { }
-	| vardcl ';' { }
+	| vardcl ';' {}
 	| error ';' { yyerror("***Error: illegal variable declaration\n");}  
 	;
 
-vardcl	: idlist ':' type {  }
+vardcl	: idlist ':' type {
+                            sprintf(CommentBuffer, "idlist has the following members:");
+                            emitComment(CommentBuffer);
+                            for(int i = 0; i < $1.count; i++) {
+                              sprintf(CommentBuffer, "\t%s", $1.ids[i]);
+                              emitComment(CommentBuffer);
+                            }
+                          }
 	;
 
-idlist	: idlist ',' ID {  }
-        | ID		{  } 
+idlist	: idlist ',' ID {
+                          $$ = $1;
+                          //$$.ids = $1.ids;
+                          //$$.count = $1.count;
+                          add_id_to_idlist(&$$, $3.str);
+                        }
+  | ID		{ 
+            $$.ids = calloc(100, sizeof(char*));
+            $$.count = 0;
+
+            //sprintf(CommentBuffer, "Going to add %s to idlist", $1.str);
+            //emitComment(CommentBuffer);
+            add_id_to_idlist(&$$, $1.str);
+
+            //sprintf(CommentBuffer, "idlist has %d members now - (added %s)", $$.count, $$.ids[$$.count]);
+            //emitComment(CommentBuffer);
+          } 
 	;
 
 
@@ -125,6 +150,8 @@ wstmt	: WHILE condexp DO stmt { }
   
 
 astmt : lhs ASG exp  { 
+                        sprintf(CommentBuffer, "$1.type = %d, $3.type = %d", $1.type, $3.type);
+                        emitComment(CommentBuffer);
                         int both_ints = $1.type == TYPE_INT && $3.type == TYPE_INT;
                         int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
                         if (!both_ints || !both_bools) {
@@ -141,19 +168,26 @@ astmt : lhs ASG exp  {
                      }
 	;
 
-lhs	: ID	{ 
-            /* BOGUS  - needs to be fixed */
-            int newReg1 = NextRegister();
-            int newReg2 = NextRegister();
-            int offset = NextOffset(4);
+lhs	: ID	{           
+            sprintf(CommentBuffer, "looking up %s", $1.str);
+            emitComment(CommentBuffer);
+            SymTabEntry *entry = lookup($1.str);
+            if (entry == NULL) {
+              printf("\n***Error: undeclared identifier %s\n", $1.str);
+            } else {
+              /* BOGUS  - needs to be fixed */
+              int newReg1 = NextRegister();
+              int newReg2 = NextRegister();
+              int offset = NextOffset(4);
 
-            $$.targetRegister = newReg2;
-            $$.type = TYPE_INT;
+              $$.targetRegister = newReg2;
+              $$.type = TYPE_INT;
 
-            insert($1.str, TYPE_INT, offset);
-             
-            emit(NOLABEL, LOADI, offset, newReg1, EMPTY);
-            emit(NOLABEL, ADD, 0, newReg1, newReg2);
+              insert($1.str, TYPE_INT, offset);
+               
+              emit(NOLABEL, LOADI, offset, newReg1, EMPTY);
+              emit(NOLABEL, ADD, 0, newReg1, newReg2);
+            }
           }
 
 
@@ -189,6 +223,7 @@ exp	: exp '+' exp		{
 
 
   | ID	{ 
+
           /* BOGUS  - needs to be fixed */
           int newReg = NextRegister();
           int offset = NextOffset(4);
