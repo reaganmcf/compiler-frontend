@@ -190,13 +190,21 @@ lhs	: ID	{
             if (entry == NULL) {
               printf("\n***Error: undeclared identifier %s\n", $1.str);
             } else {
-              /* BOGUS  - needs to be fixed */
               int newReg1 = NextRegister();
               int newReg2 = NextRegister();
 
               $$.targetRegister = newReg2;
               $$.type = entry->type;
                
+              sprintf(
+                CommentBuffer, 
+                "Compute address of variable \"%s\" at offset %d in register %d",
+                entry->name,
+                entry->offset,
+                newReg2
+              );
+              emitComment(CommentBuffer);
+                
               emit(NOLABEL, LOADI, entry->offset, newReg1, EMPTY);
               emit(NOLABEL, ADD, 0, newReg1, newReg2);
             }
@@ -239,7 +247,13 @@ exp	: exp '+' exp		{
           if (entry == NULL) {
             printf("\n***Error: undeclared identifier %s\n", $1.str);
           } else {
-            /* BOGUS  - needs to be fixed */
+            sprintf(
+              CommentBuffer, 
+              "Load RHS value of variable \"%s\" at offset %d",
+              entry->name,
+              entry->offset
+            );
+            emitComment(CommentBuffer);
             int newReg = NextRegister();
             int offset = entry->offset;
 
