@@ -16,6 +16,7 @@ char *CommentBuffer;
   tokentype token;
   regInfo targetReg;
   idlistInfo idlist;
+  Type_Expression typeExpr;
 }
 
 %token PROG PERIOD VAR 
@@ -28,7 +29,11 @@ char *CommentBuffer;
 
 %type <targetReg> exp 
 %type <targetReg> lhs 
-%type <idlist> idlist;
+
+%type <idlist> idlist
+
+%type <typeExpr> stype
+%type <typeExpr> type
 
 %start program
 
@@ -60,31 +65,37 @@ vardcls	: vardcls vardcl ';' { }
 	;
 
 vardcl	: idlist ':' type {
-                            sprintf(CommentBuffer, "idlist has the following members:");
-                            emitComment(CommentBuffer);
-                            for(int i = 0; i < $1.count; i++) {
-                              sprintf(CommentBuffer, "\t%s", $1.ids[i]);
-                              emitComment(CommentBuffer);
+                            //sprintf(CommentBuffer, "idlist has the following members:");
+                            //emitComment(CommentBuffer);
+                            //for(int i = 0; i < $1.count; i++) {
+                            //  sprintf(CommentBuffer, "\t%s", $1.ids[i]);
+                            //  emitComment(CommentBuffer);
+                            //}
+
+                            // For each id - add an entry in the lookup table
+                            for (int i = 0; i < $1.count; i++) {
+                              int offset = NextOffset(1);
+                              char* curr_id = $1.ids[i];
+                              
+                              SymTabEntry *entry = lookup(curr_id);
+                              if (entry != NULL) {
+                                printf("\n***Error: duplicate declaration of %s\n", curr_id);
+                              } else {
+                                insert(curr_id, $3, offset);
+                              }
                             }
                           }
 	;
 
 idlist	: idlist ',' ID {
                           $$ = $1;
-                          //$$.ids = $1.ids;
-                          //$$.count = $1.count;
                           add_id_to_idlist(&$$, $3.str);
                         }
   | ID		{ 
             $$.ids = calloc(100, sizeof(char*));
             $$.count = 0;
 
-            //sprintf(CommentBuffer, "Going to add %s to idlist", $1.str);
-            //emitComment(CommentBuffer);
             add_id_to_idlist(&$$, $1.str);
-
-            //sprintf(CommentBuffer, "idlist has %d members now - (added %s)", $$.count, $$.ids[$$.count]);
-            //emitComment(CommentBuffer);
           } 
 	;
 
@@ -94,8 +105,12 @@ type	: ARRAY '[' ICONST ']' OF stype {  }
         | stype {  }
 	;
 
-stype	: INT {  }
-        | BOOL {  }
+stype	: INT { 
+              $$ = TYPE_INT
+            }
+  | BOOL {
+            $$ = TYPE_BOOL
+         }
 	;
 
 stmtlist : stmtlist ';' stmt { }
@@ -150,8 +165,8 @@ wstmt	: WHILE condexp DO stmt { }
   
 
 astmt : lhs ASG exp  { 
-                        sprintf(CommentBuffer, "$1.type = %d, $3.type = %d", $1.type, $3.type);
-                        emitComment(CommentBuffer);
+                        //sprintf(CommentBuffer, "$1.type = %d, $3.type = %d", $1.type, $3.type);
+                        //emitComment(CommentBuffer);
                         int both_ints = $1.type == TYPE_INT && $3.type == TYPE_INT;
                         int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
                         if (!both_ints || !both_bools) {
@@ -169,8 +184,8 @@ astmt : lhs ASG exp  {
 	;
 
 lhs	: ID	{           
-            sprintf(CommentBuffer, "looking up %s", $1.str);
-            emitComment(CommentBuffer);
+            //sprintf(CommentBuffer, "looking up %s", $1.str);
+            //emitComment(CommentBuffer);
             SymTabEntry *entry = lookup($1.str);
             if (entry == NULL) {
               printf("\n***Error: undeclared identifier %s\n", $1.str);
@@ -178,14 +193,11 @@ lhs	: ID	{
               /* BOGUS  - needs to be fixed */
               int newReg1 = NextRegister();
               int newReg2 = NextRegister();
-              int offset = NextOffset(4);
 
               $$.targetRegister = newReg2;
-              $$.type = TYPE_INT;
-
-              insert($1.str, TYPE_INT, offset);
+              $$.type = entry->type;
                
-              emit(NOLABEL, LOADI, offset, newReg1, EMPTY);
+              emit(NOLABEL, LOADI, entry->offset, newReg1, EMPTY);
               emit(NOLABEL, ADD, 0, newReg1, newReg2);
             }
           }
@@ -223,14 +235,18 @@ exp	: exp '+' exp		{
 
 
   | ID	{ 
+          SymTabEntry* entry = lookup($1.str);
+          if (entry == NULL) {
+            printf("\n***Error: undeclared identifier %s\n", $1.str);
+          } else {
+            /* BOGUS  - needs to be fixed */
+            int newReg = NextRegister();
+            int offset = entry->offset;
 
-          /* BOGUS  - needs to be fixed */
-          int newReg = NextRegister();
-          int offset = NextOffset(4);
-
-          $$.targetRegister = newReg;
-          $$.type = TYPE_INT;
-          emit(NOLABEL, LOADAI, 0, offset, newReg);
+            $$.targetRegister = newReg;
+            $$.type = entry->type;
+            emit(NOLABEL, LOADAI, 0, offset, newReg);
+          }
         }
 
   | ID '[' exp ']'	{   }

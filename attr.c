@@ -25,8 +25,6 @@ void add_id_to_idlist(idlistInfo* idlist, char* id) {
     exit(1);
   }
 
-  printf("Adding %s - count is %d\n", id, idlist->count);
-
   idlist->ids[idlist->count] = calloc(512, sizeof(char));
   sprintf(idlist->ids[idlist->count], "%s", id);
   idlist->count = idlist->count + 1;
