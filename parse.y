@@ -169,7 +169,7 @@ astmt : lhs ASG exp  {
                         //emitComment(CommentBuffer);
                         int both_ints = $1.type == TYPE_INT && $3.type == TYPE_INT;
                         int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
-                        if (!both_ints || !both_bools) {
+                        if (!(both_ints || both_bools)) {
                           printf("*** ERROR ***: Assignment types do not match.\n");
                         }
 
