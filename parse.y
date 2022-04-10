@@ -29,6 +29,7 @@ char *CommentBuffer;
 
 %type <targetReg> exp 
 %type <targetReg> lhs 
+%type <targetReg> condexp
 
 %type <idlist> idlist
 
@@ -237,13 +238,12 @@ exp	: exp '+' exp		{
   | exp '*' exp		{  }
 
   | exp AND exp		{  
-                    int newReg = NextRegister();
-
                     int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
 
                     if (!both_bools) {
                       printf("\n***Error: types of operands for operation %s do not match\n", "AND");
                     } else { 
+                      int newReg = NextRegister();
                       $$.type = $1.type;
 
                       $$.targetRegister = newReg;
@@ -259,13 +259,13 @@ exp	: exp '+' exp		{
 
 
   | exp OR exp    {  
-                    int newReg = NextRegister();
-
                     int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
 
                     if (!both_bools) {
                       printf("\n***Error: types of operands for operation %s do not match\n", "OR");
                     } else { 
+                      int newReg = NextRegister();
+
                       $$.type = $1.type;
 
                       $$.targetRegister = newReg;
@@ -320,7 +320,7 @@ exp	: exp '+' exp		{
           }
 
   | FALSE {
-            int newReg = NextRegister(); /* TRUE is encoded as value '0' */
+            int newReg = NextRegister(); /* FALSE is encoded as value '0' */
             $$.targetRegister = newReg;
             $$.type = TYPE_BOOL;
             emit(NOLABEL, LOADI, 0, newReg, EMPTY);
@@ -330,12 +330,40 @@ exp	: exp '+' exp		{
 	;
 
 
-ctrlexp	: ID ASG ICONST ',' ICONST { }
+ctrlexp	: ID ASG ICONST ',' ICONST  
+    { 
+      SymTabEntry* entry = lookup($1.str);
+      if (entry == NULL) {
+        printf("\n***Error: undeclared identifier %s\n", $1.str);
+      } else {
+        int newReg1 = NextRegister(); 
+        int newReg2 = NextRegister(); 
+
+        int lb = $3.num;
+        int ub = $5.num;
+        sprintf(
+          CommentBuffer, 
+          "Initialize ind. variable \"%s\" at offset %d with lower bound value %d",
+          entry->name,
+          entry->offset,
+          lb,
+          ub
+        );
+        emitComment(CommentBuffer);
+        emit(NOLABEL, LOADI, entry->offset, newReg1, EMPTY);
+        emit(NOLABEL, ADD, 0, newReg1, newReg2);
+
+        int lbReg = NextRegister();
+        int ubReg = NextRegister();
+        emit(NOLABEL, LOADI, lb, lbReg, EMPTY);
+        emit(NOLABEL, LOADI, ub, ubReg, EMPTY);
+      }
+    }
         ;
 
 condexp	: exp NEQ exp		{  } 
 
-  | exp EQ exp		{  } 
+  | exp EQ exp		{  }
 
   | exp LT exp		{  }
 
