@@ -236,10 +236,48 @@ exp	: exp '+' exp		{
 
   | exp '*' exp		{  }
 
-  | exp AND exp		{  } 
+  | exp AND exp		{  
+                    int newReg = NextRegister();
+
+                    int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
+
+                    if (!both_bools) {
+                      printf("\n***Error: types of operands for operation %s do not match\n", "AND");
+                    } else { 
+                      $$.type = $1.type;
+
+                      $$.targetRegister = newReg;
+                      emit(
+                        NOLABEL, 
+                        AND_INSTR, 
+                        $1.targetRegister, 
+                        $3.targetRegister, 
+                        newReg
+                      );
+                    }
+                  } 
 
 
-  | exp OR exp    {  }
+  | exp OR exp    {  
+                    int newReg = NextRegister();
+
+                    int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
+
+                    if (!both_bools) {
+                      printf("\n***Error: types of operands for operation %s do not match\n", "OR");
+                    } else { 
+                      $$.type = $1.type;
+
+                      $$.targetRegister = newReg;
+                      emit(
+                        NOLABEL, 
+                        OR_INSTR, 
+                        $1.targetRegister, 
+                        $3.targetRegister, 
+                        newReg
+                      );
+                    }
+                  }
 
 
   | ID	{ 
