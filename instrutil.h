@@ -7,6 +7,8 @@
 #ifndef _INSTRUCTION_H_
 #define _INSTRUCTION_H_
 
+#include "stdio.h"
+
 #define NOLABEL -1
 #define EMPTY 0
 #define STATIC_AREA_ADDRESS 1024
