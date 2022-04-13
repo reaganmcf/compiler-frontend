@@ -17,6 +17,8 @@ char *CommentBuffer;
   regInfo targetReg;
   idlistInfo idlist;
   Type_Expression typeExpr;
+  ctrlexpInfo ctrlexpInfo;
+  fstmtInfo fstmtInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -35,6 +37,9 @@ char *CommentBuffer;
 
 %type <typeExpr> stype
 %type <typeExpr> type
+
+%type <ctrlexpInfo> ctrlexp; 
+%type <fstmtInfo> fstmt;
 
 %start program
 
@@ -156,7 +161,66 @@ writestmt: PRT '(' exp ')' {
                            }
 	;
 
-fstmt	: FOR ctrlexp DO stmt { }
+fstmt	: FOR ctrlexp {
+                      sprintf(CommentBuffer, "Generate control code for \"FOR\" ");
+                      emitComment(CommentBuffer);
+                      
+                      SymTabEntry* id_entry = lookup($2.id);
+                      if (id_entry == NULL) {
+                        printf("ICE: id_entry is NULL\n");
+                        exit(1);
+                      }
+
+                      int cmp_branch = NextLabel();
+                      int body_branch = NextLabel();
+                      int break_branch = NextLabel();
+        
+                      $$.cmp_label = cmp_branch;
+                      $$.break_label = break_branch;
+
+                      //sprintf(CommentBuffer, "cmp = %d, body = %d, break = %d",
+                      //  $$.cmp_label,
+                      //  $$.body_label,
+                      //  $$.break_label
+                      //);
+                      //emitComment(CommentBuffer);
+
+                      int reg1 = NextRegister();
+                      int reg2 = NextRegister();
+                      // upper bound reg hasn't been created yet, but it's always 3 more than this one
+                      int ub_reg = reg1 + 3; 
+                      emit(cmp_branch, LOADAI, 0, id_entry->offset, reg1);
+                      emit(NOLABEL, CMPLE, reg1, ub_reg, reg2);
+                      emit(NOLABEL, CBR, reg2, body_branch, break_branch);
+
+                      emit(body_branch, NOP, EMPTY, EMPTY, EMPTY);
+
+                      // Lb and Ub registers are hardcoded from before,
+                      // so we need to skip over them
+                      NextRegister();
+                      NextRegister();
+                    }
+          DO stmt { 
+                    //sprintf(CommentBuffer, "cmp = %d, body = %d, break = %d",
+                    //  $$.cmp_label,
+                    //  $$.body_label,
+                    //  $$.break_label
+                    //);
+                    //emitComment(CommentBuffer);
+                    SymTabEntry* id_entry = lookup($2.id);
+                    if (id_entry == NULL) {
+                      printf("ICE: id_entry is NULL\n");
+                      exit(1);
+                    }
+
+                    int reg1 = NextRegister();
+                    int reg2 = NextRegister();
+                    emit(NOLABEL, LOADAI, 0, id_entry->offset, reg1);
+                    emit(NOLABEL, ADDI, reg1, 1, reg2);
+                    emit(NOLABEL, STOREAI, reg2, 0, id_entry->offset);
+                    emit(NOLABEL, BR, $$.cmp_label, EMPTY, EMPTY);
+                    emit($$.break_label, NOP, EMPTY, EMPTY, EMPTY);
+                  }
           ENDFOR
 	;
 
@@ -338,25 +402,30 @@ ctrlexp	: ID ASG ICONST ',' ICONST
       } else {
         int newReg1 = NextRegister(); 
         int newReg2 = NextRegister(); 
+        // the order is so weird on the solution compiler,
+        // so we hard code these and incremenet the NextRegister
+        // manually later
+        int lbReg = newReg2 + 3;
+        int ubReg = lbReg + 1;
 
         int lb = $3.num;
         int ub = $5.num;
+
+        $$.id = $1.str;
+
         sprintf(
           CommentBuffer, 
           "Initialize ind. variable \"%s\" at offset %d with lower bound value %d",
           entry->name,
           entry->offset,
-          lb,
-          ub
+          lb
         );
         emitComment(CommentBuffer);
         emit(NOLABEL, LOADI, entry->offset, newReg1, EMPTY);
         emit(NOLABEL, ADD, 0, newReg1, newReg2);
-
-        int lbReg = NextRegister();
-        int ubReg = NextRegister();
         emit(NOLABEL, LOADI, lb, lbReg, EMPTY);
         emit(NOLABEL, LOADI, ub, ubReg, EMPTY);
+        emit(NOLABEL, STORE, lbReg, newReg2, EMPTY);
       }
     }
         ;

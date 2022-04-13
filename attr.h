@@ -30,4 +30,13 @@ typedef struct {
 
 void add_id_to_idlist(idlistInfo* idlist, char* id);
 
+typedef struct {
+  char* id;
+} ctrlexpInfo;
+
+typedef struct {
+  int cmp_label;
+  int break_label;
+} fstmtInfo;
+
 #endif
