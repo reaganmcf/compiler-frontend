@@ -18,7 +18,7 @@ char *CommentBuffer;
   idlistInfo idlist;
   Type_Expression typeExpr;
   ctrlexpInfo ctrlexpInfo;
-  fstmtInfo fstmtInfo;
+  forLoopInfo forInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -39,7 +39,7 @@ char *CommentBuffer;
 %type <typeExpr> type
 
 %type <ctrlexpInfo> ctrlexp; 
-%type <fstmtInfo> fstmt;
+%type <forInfo> FOR;
 
 %start program
 
@@ -175,8 +175,8 @@ fstmt	: FOR ctrlexp {
                       int body_branch = NextLabel();
                       int break_branch = NextLabel();
         
-                      $$.cmp_label = cmp_branch;
-                      $$.break_label = break_branch;
+                      $1.cmp_label = cmp_branch;
+                      $1.break_label = break_branch;
 
                       //sprintf(CommentBuffer, "cmp = %d, body = %d, break = %d",
                       //  $$.cmp_label,
@@ -201,25 +201,21 @@ fstmt	: FOR ctrlexp {
                       NextRegister();
                     }
           DO stmt { 
-                    //sprintf(CommentBuffer, "cmp = %d, body = %d, break = %d",
-                    //  $$.cmp_label,
-                    //  $$.body_label,
-                    //  $$.break_label
-                    //);
-                    //emitComment(CommentBuffer);
                     SymTabEntry* id_entry = lookup($2.id);
                     if (id_entry == NULL) {
                       printf("ICE: id_entry is NULL\n");
                       exit(1);
                     }
 
+                    // TODO: fix $$ accesses in this later block
+
                     int reg1 = NextRegister();
                     int reg2 = NextRegister();
                     emit(NOLABEL, LOADAI, 0, id_entry->offset, reg1);
                     emit(NOLABEL, ADDI, reg1, 1, reg2);
                     emit(NOLABEL, STOREAI, reg2, 0, id_entry->offset);
-                    emit(NOLABEL, BR, $$.cmp_label, EMPTY, EMPTY);
-                    emit($$.break_label, NOP, EMPTY, EMPTY, EMPTY);
+                    emit(NOLABEL, BR, $1.cmp_label, EMPTY, EMPTY);
+                    emit($1.break_label, NOP, EMPTY, EMPTY, EMPTY);
                   }
           ENDFOR
 	;

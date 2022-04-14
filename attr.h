@@ -37,6 +37,6 @@ typedef struct {
 typedef struct {
   int cmp_label;
   int break_label;
-} fstmtInfo;
+} forLoopInfo;
 
 #endif
