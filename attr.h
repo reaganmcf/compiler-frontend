@@ -39,4 +39,10 @@ typedef struct {
   int break_label;
 } forLoopInfo;
 
+typedef struct {
+  int true_label;
+  int false_label;
+  int after_else_label;
+} ifHeadInfo;
+
 #endif

@@ -19,6 +19,7 @@ char *CommentBuffer;
   Type_Expression typeExpr;
   ctrlexpInfo ctrlexpInfo;
   forLoopInfo forInfo;
+  ifHeadInfo ifInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -40,6 +41,7 @@ char *CommentBuffer;
 
 %type <ctrlexpInfo> ctrlexp; 
 %type <forInfo> FOR;
+%type <ifInfo> ifhead;
 
 %start program
 
@@ -136,14 +138,41 @@ cmpdstmt: BEG stmtlist END { }
 	;
 
 ifstmt :  ifhead 
-          THEN
+          THEN {
+                emit($1.true_label, NOP, EMPTY, EMPTY, EMPTY);
+                sprintf(CommentBuffer, "This is the \"true\" branch");
+                emitComment(CommentBuffer);
+               }
           stmt 
+              {
+                sprintf(CommentBuffer, "Branch to statement following the \"else\" statement list");
+                emitComment(CommentBuffer);
+                emit(NOLABEL, BR, $1.after_else_label, EMPTY, EMPTY);
+              }
   	  ELSE 
+               {
+                emit($1.false_label, NOP, EMPTY, EMPTY, EMPTY);
+                sprintf(CommentBuffer, "This is the \"false\" branch");
+                emitComment(CommentBuffer);
+               }
           stmt 
           FI
+            {
+              emit($1.after_else_label, NOP, EMPTY, EMPTY, EMPTY);
+            }
 	;
 
-ifhead : IF condexp {  }
+ifhead : IF condexp {
+                      int true_label = NextLabel();
+                      int false_label = NextLabel();
+                      int after_else_label = NextLabel();
+
+                      emit(NOLABEL, CBR, $2.targetRegister, true_label, false_label);
+                      
+                      $$.true_label = true_label;
+                      $$.false_label = false_label;
+                      $$.after_else_label = after_else_label;
+                    }
         ;
 
 writestmt: PRT '(' exp ')' { 
@@ -430,7 +459,13 @@ condexp	: exp NEQ exp		{  }
 
   | exp EQ exp		{  }
 
-  | exp LT exp		{  }
+  | exp LT exp		{  
+                    int reg1 = NextRegister();
+                    emit(NOLABEL, CMPLT, $1.targetRegister, $3.targetRegister, reg1);
+
+                    $$.type = TYPE_BOOL;
+                    $$.targetRegister = reg1;
+                  }
 
   | exp LEQ exp		{  }
 
