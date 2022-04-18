@@ -367,7 +367,22 @@ exp	: exp '+' exp		{
                       );
                     }
 
-  | exp '-' exp		{  }
+  | exp '-' exp		{  
+                    int newReg = NextRegister();
+
+                    if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
+                      printf("*** ERROR ***: Operator types must be integer.\n");
+                    }
+                    $$.typeExpr = $1.typeExpr;
+
+                    $$.targetRegister = newReg;
+                    emit(NOLABEL, 
+                         SUB, 
+                         $1.targetRegister, 
+                         $3.targetRegister, 
+                         newReg
+                    );
+                }
 
   | exp '*' exp		{  }
 
@@ -435,7 +450,37 @@ exp	: exp '+' exp		{
           }
         }
 
-  | ID '[' exp ']'	{   }
+  | ID '[' exp ']'	{
+                      SymTabEntry *entry = lookup($1.str);
+                      if (entry == NULL) {
+                        printf("\n***Error: undeclared identifier %s\n", $1.str);
+                      } else {
+                        sprintf(
+                          CommentBuffer, 
+                          "Load RHS value of array variable \"%s\" with based address %d",
+                          entry->name,
+                          entry->offset
+                        );
+                        emitComment(CommentBuffer);
+
+                        int actual_address_reg = NextRegister();
+                        
+                        int elem_size_reg = NextRegister();
+                        emit(NOLABEL, LOADI, 4, elem_size_reg, EMPTY);
+
+                        int offset_address_reg = NextRegister();
+                        emit(NOLABEL, MULT, $3.targetRegister, elem_size_reg, offset_address_reg);
+
+                        int base_address_reg = NextRegister();
+                        emit(NOLABEL, LOADI, entry->offset, base_address_reg, EMPTY);
+
+                        int relative_address_reg = NextRegister();
+                        emit(NOLABEL, ADD, base_address_reg, offset_address_reg, relative_address_reg);
+
+                        emit(NOLABEL, LOADAO, 0, relative_address_reg, actual_address_reg);
+                        $$.targetRegister = actual_address_reg;
+                      }
+                    }
  
 
 
