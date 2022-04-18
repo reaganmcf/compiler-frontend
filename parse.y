@@ -382,9 +382,24 @@ exp	: exp '+' exp		{
                          $3.targetRegister, 
                          newReg
                     );
-                }
+                  }
 
-  | exp '*' exp		{  }
+  | exp '*' exp		{
+                    int newReg = NextRegister();
+
+                    if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
+                      printf("*** ERROR ***: Operator types must be integer.\n");
+                    }
+                    $$.typeExpr = $1.typeExpr;
+
+                    $$.targetRegister = newReg;
+                    emit(NOLABEL, 
+                         MULT, 
+                         $1.targetRegister, 
+                         $3.targetRegister, 
+                         newReg
+                    );
+                  }
 
   | exp AND exp		{  
                     int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
