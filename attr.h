@@ -15,7 +15,9 @@ typedef union {
 typedef enum type_expression {
   TYPE_INT = 0,
   TYPE_BOOL,
-  TYPE_ERROR
+  TYPE_ERROR,
+  TYPE_INT_ARRAY,
+  TYPE_BOOL_ARRAY
 } Type_Expression;
 
 typedef struct {
@@ -44,5 +46,10 @@ typedef struct {
   int false_label;
   int after_else_label;
 } ifHeadInfo;
+
+typedef struct {
+  Type_Expression type;
+  int size;
+} typeDeclInfo;
 
 #endif

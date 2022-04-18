@@ -20,6 +20,7 @@ char *CommentBuffer;
   ctrlexpInfo ctrlexpInfo;
   forLoopInfo forInfo;
   ifHeadInfo ifInfo;
+  typeDeclInfo typeDeclInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -37,7 +38,7 @@ char *CommentBuffer;
 %type <idlist> idlist
 
 %type <typeExpr> stype
-%type <typeExpr> type
+%type <typeDeclInfo> type
 
 %type <ctrlexpInfo> ctrlexp; 
 %type <forInfo> FOR;
@@ -89,7 +90,7 @@ vardcl	: idlist ':' type {
                               if (entry != NULL) {
                                 printf("\n***Error: duplicate declaration of %s\n", curr_id);
                               } else {
-                                insert(curr_id, $3, offset);
+                                insert(curr_id, $3.type, offset);
                               }
                             }
                           }
@@ -108,9 +109,19 @@ idlist	: idlist ',' ID {
 	;
 
 
-type	: ARRAY '[' ICONST ']' OF stype {  }
+type	: ARRAY '[' ICONST ']' OF stype {
+                                        if ($6 == TYPE_INT) {
+                                          $$.type = TYPE_INT_ARRAY;
+                                          $$.size = $3.num;
+                                        } else if ($6 == TYPE_BOOL) {
+                                          $$.type = TYPE_BOOL_ARRAY;
+                                          $$.size = $3.num;
+                                        } else {
+                                          yyerror("**Error: arrays can only be simple types\n");
+                                        }
+                                      }
 
-        | stype {  }
+        | stype { $$.type = $1 }
 	;
 
 stype	: INT { 
@@ -301,7 +312,9 @@ lhs	: ID	{
           }
 
 
-  |  ID '[' exp ']' {   }
+  |  ID '[' exp ']' {
+                      
+                    }
   ;
 
 

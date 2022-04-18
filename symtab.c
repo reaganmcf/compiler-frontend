@@ -82,6 +82,12 @@ static char *TypeToString(Type_Expression type) {
   case TYPE_BOOL:
     return ("boolean");
     break;
+  case TYPE_INT_ARRAY:
+    return ("integer array");
+    break;
+  case TYPE_BOOL_ARRAY:
+    return ("boolean array");
+    break;
   case TYPE_ERROR:
     return ("undefined type");
     break;
