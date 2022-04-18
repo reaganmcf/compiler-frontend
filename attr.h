@@ -12,16 +12,25 @@ typedef union {
   char *str;
 } tokentype;
 
-typedef enum type_expression {
+typedef enum simple_types {
   TYPE_INT = 0,
   TYPE_BOOL,
   TYPE_ERROR,
   TYPE_INT_ARRAY,
-  TYPE_BOOL_ARRAY
+  TYPE_BOOL_ARRAY 
+} Simple_Type;
+
+typedef union type_data {
+  int array_size; 
+} typeData;
+
+typedef struct type_expression {
+  Simple_Type type;
+  typeData data;
 } Type_Expression;
 
 typedef struct {
-  Type_Expression type;
+  Type_Expression typeExpr;
   int targetRegister;
 } regInfo;
 
@@ -46,10 +55,5 @@ typedef struct {
   int false_label;
   int after_else_label;
 } ifHeadInfo;
-
-typedef struct {
-  Type_Expression type;
-  int size;
-} typeDeclInfo;
 
 #endif

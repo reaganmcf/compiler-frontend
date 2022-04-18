@@ -20,7 +20,6 @@ char *CommentBuffer;
   ctrlexpInfo ctrlexpInfo;
   forLoopInfo forInfo;
   ifHeadInfo ifInfo;
-  typeDeclInfo typeDeclInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -38,7 +37,7 @@ char *CommentBuffer;
 %type <idlist> idlist
 
 %type <typeExpr> stype
-%type <typeDeclInfo> type
+%type <typeExpr> type
 
 %type <ctrlexpInfo> ctrlexp; 
 %type <forInfo> FOR;
@@ -90,7 +89,7 @@ vardcl	: idlist ':' type {
                               if (entry != NULL) {
                                 printf("\n***Error: duplicate declaration of %s\n", curr_id);
                               } else {
-                                insert(curr_id, $3.type, offset);
+                                insert(curr_id, $3, offset);
                               }
                             }
                           }
@@ -110,25 +109,27 @@ idlist	: idlist ',' ID {
 
 
 type	: ARRAY '[' ICONST ']' OF stype {
-                                        if ($6 == TYPE_INT) {
-                                          $$.type = TYPE_INT_ARRAY;
-                                          $$.size = $3.num;
-                                        } else if ($6 == TYPE_BOOL) {
-                                          $$.type = TYPE_BOOL_ARRAY;
-                                          $$.size = $3.num;
-                                        } else {
-                                          yyerror("**Error: arrays can only be simple types\n");
-                                        }
+                                        //if ($6 == TYPE_INT) {
+                                        //  $$.type = TYPE_INT_ARRAY;
+                                        //  $$.size = $3.num;
+                                        //} else if ($6 == TYPE_BOOL) {
+                                        //  $$.type = TYPE_BOOL_ARRAY;
+                                        //  $$.size = $3.num;
+                                        //} else {
+                                        //  yyerror("**Error: arrays can only be simple types\n");
+                                        //}
                                       }
 
-        | stype { $$.type = $1 }
+        | stype { 
+                  $$ = $1;
+                }
 	;
 
 stype	: INT { 
-              $$ = TYPE_INT
+              $$.type = TYPE_INT
             }
   | BOOL {
-            $$ = TYPE_BOOL
+            $$.type = TYPE_BOOL
          }
 	;
 
@@ -247,8 +248,6 @@ fstmt	: FOR ctrlexp {
                       exit(1);
                     }
 
-                    // TODO: fix $$ accesses in this later block
-
                     int reg1 = NextRegister();
                     int reg2 = NextRegister();
                     emit(NOLABEL, LOADAI, 0, id_entry->offset, reg1);
@@ -268,8 +267,8 @@ wstmt	: WHILE condexp DO stmt { }
 astmt : lhs ASG exp  { 
                         //sprintf(CommentBuffer, "$1.type = %d, $3.type = %d", $1.type, $3.type);
                         //emitComment(CommentBuffer);
-                        int both_ints = $1.type == TYPE_INT && $3.type == TYPE_INT;
-                        int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
+                        int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                        int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
                         if (!(both_ints || both_bools)) {
                           printf("*** ERROR ***: Assignment types do not match.\n");
                         }
@@ -295,7 +294,7 @@ lhs	: ID	{
               int newReg2 = NextRegister();
 
               $$.targetRegister = newReg2;
-              $$.type = entry->type;
+              $$.typeExpr = entry->typeExpr;
                
               sprintf(
                 CommentBuffer, 
@@ -321,10 +320,10 @@ lhs	: ID	{
 exp	: exp '+' exp		{ 
                       int newReg = NextRegister();
 
-                      if (! (($1.type == TYPE_INT) && ($3.type == TYPE_INT))) {
+                      if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
                         printf("*** ERROR ***: Operator types must be integer.\n");
                       }
-                      $$.type = $1.type;
+                      $$.typeExpr = $1.typeExpr;
 
                       $$.targetRegister = newReg;
                       emit(NOLABEL, 
@@ -340,13 +339,13 @@ exp	: exp '+' exp		{
   | exp '*' exp		{  }
 
   | exp AND exp		{  
-                    int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
+                    int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
 
                     if (!both_bools) {
                       printf("\n***Error: types of operands for operation %s do not match\n", "AND");
                     } else { 
                       int newReg = NextRegister();
-                      $$.type = $1.type;
+                      $$.typeExpr = $1.typeExpr;
 
                       $$.targetRegister = newReg;
                       emit(
@@ -361,14 +360,14 @@ exp	: exp '+' exp		{
 
 
   | exp OR exp    {  
-                    int both_bools = $1.type == TYPE_BOOL && $3.type == TYPE_BOOL;
+                    int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
 
                     if (!both_bools) {
                       printf("\n***Error: types of operands for operation %s do not match\n", "OR");
                     } else { 
                       int newReg = NextRegister();
 
-                      $$.type = $1.type;
+                      $$.typeExpr = $1.typeExpr;
 
                       $$.targetRegister = newReg;
                       emit(
@@ -398,7 +397,7 @@ exp	: exp '+' exp		{
             int offset = entry->offset;
 
             $$.targetRegister = newReg;
-            $$.type = entry->type;
+            $$.typeExpr = entry->typeExpr;
             emit(NOLABEL, LOADAI, 0, offset, newReg);
           }
         }
@@ -410,21 +409,21 @@ exp	: exp '+' exp		{
 	| ICONST  { 
               int newReg = NextRegister();
               $$.targetRegister = newReg;
-              $$.type = TYPE_INT;
+              $$.typeExpr.type = TYPE_INT;
               emit(NOLABEL, LOADI, $1.num, newReg, EMPTY); 
             }
 
   | TRUE  { 
             int newReg = NextRegister(); /* TRUE is encoded as value '1' */
             $$.targetRegister = newReg;
-            $$.type = TYPE_BOOL;
+            $$.typeExpr.type = TYPE_BOOL;
             emit(NOLABEL, LOADI, 1, newReg, EMPTY); 
           }
 
   | FALSE {
             int newReg = NextRegister(); /* FALSE is encoded as value '0' */
             $$.targetRegister = newReg;
-            $$.type = TYPE_BOOL;
+            $$.typeExpr.type = TYPE_BOOL;
             emit(NOLABEL, LOADI, 0, newReg, EMPTY);
           }
 
@@ -476,7 +475,7 @@ condexp	: exp NEQ exp		{  }
                     int reg1 = NextRegister();
                     emit(NOLABEL, CMPLT, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.type = TYPE_BOOL;
+                    $$.typeExpr.type = TYPE_BOOL;
                     $$.targetRegister = reg1;
                   }
 

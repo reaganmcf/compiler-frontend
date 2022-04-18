@@ -70,12 +70,13 @@ void insert(char *name, Type_Expression type, int offset) {
   HashTable[currentIndex] = (SymTabEntry *)malloc(sizeof(SymTabEntry));
   HashTable[currentIndex]->name = (char *)malloc(strlen(name) + 1);
   strcpy(HashTable[currentIndex]->name, name);
-  HashTable[currentIndex]->type = type;     /* type expression */
+  HashTable[currentIndex]->typeExpr = type;     /* type expression */
   HashTable[currentIndex]->offset = offset; /* in bytes */
 }
 
-static char *TypeToString(Type_Expression type) {
-  switch (type) {
+static char *TypeToString(Type_Expression typeExpr) {
+  char* buf = calloc(32, sizeof(char));
+  switch (typeExpr.type) {
   case TYPE_INT:
     return ("integer");
     break;
@@ -83,11 +84,11 @@ static char *TypeToString(Type_Expression type) {
     return ("boolean");
     break;
   case TYPE_INT_ARRAY:
-    return ("integer array");
-    break;
+    sprintf(buf, "integer array of size %d", typeExpr.data.array_size);
+    return buf;
   case TYPE_BOOL_ARRAY:
-    return ("boolean array");
-    break;
+    sprintf(buf, "boolean array of size %d", typeExpr.data.array_size);
+    return buf;
   case TYPE_ERROR:
     return ("undefined type");
     break;
@@ -104,7 +105,7 @@ void PrintSymbolTable() {
   for (i = 0; i < HASH_TABLE_SIZE; i++) {
     if (HashTable[i] != NULL) {
       printf("\t \"%s\" of type %s with offset %d\n", HashTable[i]->name,
-             TypeToString(HashTable[i]->type), HashTable[i]->offset);
+             TypeToString(HashTable[i]->typeExpr), HashTable[i]->offset);
     }
   }
   printf("\n --------------------------------\n\n");
