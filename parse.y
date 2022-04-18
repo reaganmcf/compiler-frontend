@@ -81,8 +81,12 @@ vardcl	: idlist ':' type {
                             //}
 
                             // For each id - add an entry in the lookup table
+                            int offset_size = 1;
+                            if ($3.type == TYPE_INT_ARRAY || $3.type == TYPE_BOOL_ARRAY) {
+                              offset_size = $3.data.array_size;
+                            }
                             for (int i = 0; i < $1.count; i++) {
-                              int offset = NextOffset(1);
+                              int offset = NextOffset(offset_size);
                               char* curr_id = $1.ids[i];
                               
                               SymTabEntry *entry = lookup(curr_id);
@@ -109,15 +113,15 @@ idlist	: idlist ',' ID {
 
 
 type	: ARRAY '[' ICONST ']' OF stype {
-                                        //if ($6 == TYPE_INT) {
-                                        //  $$.type = TYPE_INT_ARRAY;
-                                        //  $$.size = $3.num;
-                                        //} else if ($6 == TYPE_BOOL) {
-                                        //  $$.type = TYPE_BOOL_ARRAY;
-                                        //  $$.size = $3.num;
-                                        //} else {
-                                        //  yyerror("**Error: arrays can only be simple types\n");
-                                        //}
+                                        if ($6.type == TYPE_INT) {
+                                          $$.type = TYPE_INT_ARRAY;
+                                          $$.data.array_size = $3.num;
+                                        } else if ($6.type == TYPE_BOOL) {
+                                          $$.type = TYPE_BOOL_ARRAY;
+                                          $$.data.array_size = $3.num;
+                                        } else {
+                                          yyerror("**Error: arrays can only be simple types\n");
+                                        }
                                       }
 
         | stype { 
@@ -312,7 +316,36 @@ lhs	: ID	{
 
 
   |  ID '[' exp ']' {
+                      SymTabEntry *entry = lookup($1.str);
+                      if (entry == NULL) {
+                        printf("\n***Error: undeclared identifier %s\n", $1.str);
+                      } else {
+                        sprintf(
+                          CommentBuffer, 
+                          "Compute address of array variable \"%s\" with base address %d",
+                          entry->name,
+                          entry->offset
+                        );
+                        emitComment(CommentBuffer);
                       
+                        int actual_address_reg = NextRegister();
+                        
+                        int elem_size_reg = NextRegister();
+                        emit(NOLABEL, LOADI, 4, elem_size_reg, EMPTY);
+
+                        int offset_address_reg = NextRegister();
+                        emit(NOLABEL, MULT, $3.targetRegister, elem_size_reg, offset_address_reg);
+
+                        int base_address_reg = NextRegister();
+                        emit(NOLABEL, LOADI, entry->offset, base_address_reg, EMPTY);
+
+                        int relative_address_reg = NextRegister();
+                        emit(NOLABEL, ADD, base_address_reg, offset_address_reg, relative_address_reg);
+
+                        emit(NOLABEL, ADD, 0, relative_address_reg, actual_address_reg);
+
+                        $$.targetRegister = actual_address_reg;
+                      }
                     }
   ;
 
