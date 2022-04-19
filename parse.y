@@ -607,7 +607,13 @@ condexp	: exp NEQ exp		{
                     $$.targetRegister = reg1;
                   }
 
-  | exp LEQ exp		{  }
+  | exp LEQ exp		{
+                    int reg1 = NextRegister();
+                    emit(NOLABEL, CMPLE, $1.targetRegister, $3.targetRegister, reg1);
+
+                    $$.typeExpr.type = TYPE_BOOL;
+                    $$.targetRegister = reg1;
+                  }
 
 	| exp GT exp		{  }
 
