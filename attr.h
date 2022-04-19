@@ -56,4 +56,10 @@ typedef struct {
   int after_else_label;
 } ifHeadInfo;
 
+typedef struct {
+  int cmp_label;
+  int body_label;
+  int break_label;
+} whileLoopInfo;
+
 #endif

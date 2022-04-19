@@ -20,6 +20,7 @@ char *CommentBuffer;
   ctrlexpInfo ctrlexpInfo;
   forLoopInfo forInfo;
   ifHeadInfo ifInfo;
+  whileLoopInfo whileInfo;
 }
 
 %token PROG PERIOD VAR 
@@ -41,6 +42,7 @@ char *CommentBuffer;
 
 %type <ctrlexpInfo> ctrlexp; 
 %type <forInfo> FOR;
+%type <whileInfo> WHILE;
 %type <ifInfo> ifhead;
 
 %start program
@@ -263,8 +265,35 @@ fstmt	: FOR ctrlexp {
           ENDFOR
 	;
 
-wstmt	: WHILE condexp DO stmt { }
-          ENDWHILE
+wstmt	: WHILE { 
+                int cmp_label = NextLabel();
+                emit(cmp_label, NOP, EMPTY, EMPTY, EMPTY);
+
+                $1.cmp_label = cmp_label;
+
+                sprintf(CommentBuffer, "Control code for \"WHILE DO\"");
+                emitComment(CommentBuffer);
+              }
+      condexp {
+                int body_label = NextLabel();
+                int break_label = NextLabel();
+
+                $1.body_label = body_label;
+                $1.break_label = break_label;
+
+                emit(NOLABEL, CBR, $3.targetRegister, body_label, break_label);
+
+                emit(body_label, NOP, EMPTY, EMPTY, EMPTY);
+              }
+           DO {
+                sprintf(CommentBuffer, "Body of \"WHILE\" construct starts here");
+                emitComment(CommentBuffer);
+              } 
+         stmt {
+                emit(NOLABEL, BR, $1.cmp_label, EMPTY, EMPTY);
+                emit($1.break_label, NOP, EMPTY, EMPTY, EMPTY);
+              }
+      ENDWHILE
         ;
   
 
@@ -560,7 +589,13 @@ ctrlexp	: ID ASG ICONST ',' ICONST
     }
         ;
 
-condexp	: exp NEQ exp		{  } 
+condexp	: exp NEQ exp		{
+                          int reg1 = NextRegister();
+                          emit(NOLABEL, CMPNE, $1.targetRegister, $3.targetRegister, reg1);
+
+                          $$.typeExpr.type = TYPE_BOOL;
+                          $$.targetRegister = reg1;
+                        } 
 
   | exp EQ exp		{  }
 
