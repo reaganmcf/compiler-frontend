@@ -9,6 +9,7 @@ void yyerror(char * s);
 
 FILE *outfile;
 char *CommentBuffer;
+char *ErrorBuffer;
  
 %}
 
@@ -86,7 +87,8 @@ vardcl	: idlist ':' type {
                               
                               SymTabEntry *entry = lookup(curr_id);
                               if (entry != NULL) {
-                                printf("\n***Error: duplicate declaration of %s\n", curr_id);
+                                sprintf(ErrorBuffer, "\n***Error: duplicate declaration of %s\n", curr_id);
+                                yyerror(ErrorBuffer);
                               } else {
                                 insert(curr_id, $3, offset);
                               }
@@ -174,15 +176,19 @@ ifstmt :  ifhead
 	;
 
 ifhead : IF condexp {
-                      int true_label = NextLabel();
-                      int false_label = NextLabel();
-                      int after_else_label = NextLabel();
+                      if ($2.typeExpr.type != TYPE_BOOL) {
+                        yyerror("\n***Error: exp in if stmt must be boolean\n");
+                      } else {
+                        int true_label = NextLabel();
+                        int false_label = NextLabel();
+                        int after_else_label = NextLabel();
 
-                      emit(NOLABEL, CBR, $2.targetRegister, true_label, false_label);
-                      
-                      $$.true_label = true_label;
-                      $$.false_label = false_label;
-                      $$.after_else_label = after_else_label;
+                        emit(NOLABEL, CBR, $2.targetRegister, true_label, false_label);
+                        
+                        $$.true_label = true_label;
+                        $$.false_label = false_label;
+                        $$.after_else_label = after_else_label;
+                      }
                     }
         ;
 
@@ -261,15 +267,19 @@ wstmt	: WHILE {
                 emitComment(CommentBuffer);
               }
       condexp {
-                int body_label = NextLabel();
-                int break_label = NextLabel();
+                if ($3.typeExpr.type != TYPE_BOOL) {
+                  yyerror("\n***Error: exp in while stmt must be boolean\n");
+                } else {
+                  int body_label = NextLabel();
+                  int break_label = NextLabel();
 
-                $1.body_label = body_label;
-                $1.break_label = break_label;
+                  $1.body_label = body_label;
+                  $1.break_label = break_label;
 
-                emit(NOLABEL, CBR, $3.targetRegister, body_label, break_label);
+                  emit(NOLABEL, CBR, $3.targetRegister, body_label, break_label);
 
-                emit(body_label, NOP, EMPTY, EMPTY, EMPTY);
+                  emit(body_label, NOP, EMPTY, EMPTY, EMPTY);
+                }
               }
            DO {
                 sprintf(CommentBuffer, "Body of \"WHILE\" construct starts here");
@@ -284,28 +294,31 @@ wstmt	: WHILE {
   
 
 astmt : lhs ASG exp  { 
-                        //sprintf(CommentBuffer, "$1.type = %d, $3.type = %d", $1.type, $3.type);
-                        //emitComment(CommentBuffer);
                         int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
                         int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
                         if (!(both_ints || both_bools)) {
-                          printf("*** ERROR ***: Assignment types do not match.\n");
+                          sprintf(ErrorBuffer, "\n***Error: assignment types do not match\n");
+                          yyerror(ErrorBuffer);
+                        } else if ($1.typeExpr.type == TYPE_INT_ARRAY || $1.typeExpr.type == TYPE_BOOL_ARRAY) {
+                          sprintf(ErrorBuffer, "\n***Error: assignment to whole array\n");
+                          yyerror(ErrorBuffer);
+                        } else {
+                          emit(
+                            NOLABEL,
+                            STORE, 
+                            $3.targetRegister,
+                            $1.targetRegister,
+                            EMPTY
+                          );
                         }
-
-                        emit(
-                          NOLABEL,
-                          STORE, 
-                          $3.targetRegister,
-                          $1.targetRegister,
-                          EMPTY
-                        );
                      }
 	;
 
 lhs	: ID	{           
             SymTabEntry *entry = lookup($1.str);
             if (entry == NULL) {
-              printf("\n***Error: undeclared identifier %s\n", $1.str);
+              sprintf(ErrorBuffer, "\n***Error: undeclared identifier %s\n", $1.str);
+              yyerror(ErrorBuffer);
             } else {
               int newReg1 = NextRegister();
               int newReg2 = NextRegister();
@@ -332,6 +345,12 @@ lhs	: ID	{
                       SymTabEntry *entry = lookup($1.str);
                       if (entry == NULL) {
                         printf("\n***Error: undeclared identifier %s\n", $1.str);
+                      } else if ($3.typeExpr.type != TYPE_INT) {
+                        sprintf(ErrorBuffer, "\n***Error: subscript exp not type integer\n");
+                        yyerror(ErrorBuffer);
+                      } else if (entry->typeExpr.type == TYPE_INT_ARRAY || entry->typeExpr.type == TYPE_BOOL_ARRAY) {
+                        sprintf(ErrorBuffer, "\n***Error: id %s is not an array\n", entry->name);
+                        yyerror(ErrorBuffer);
                       } else {
                         sprintf(
                           CommentBuffer, 
@@ -367,7 +386,8 @@ exp	: exp '+' exp		{
                       int newReg = NextRegister();
 
                       if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
-                        printf("*** ERROR ***: Operator types must be integer.\n");
+                        sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "+"); 
+                        yyerror(ErrorBuffer);
                       }
                       $$.typeExpr = $1.typeExpr;
 
@@ -384,7 +404,8 @@ exp	: exp '+' exp		{
                     int newReg = NextRegister();
 
                     if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
-                      printf("*** ERROR ***: Operator types must be integer.\n");
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "-"); 
+                      yyerror(ErrorBuffer);
                     }
                     $$.typeExpr = $1.typeExpr;
 
@@ -401,7 +422,8 @@ exp	: exp '+' exp		{
                     int newReg = NextRegister();
 
                     if (! (($1.typeExpr.type == TYPE_INT) && ($3.typeExpr.type == TYPE_INT))) {
-                      printf("*** ERROR ***: Operator types must be integer.\n");
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "*"); 
+                      yyerror(ErrorBuffer);
                     }
                     $$.typeExpr = $1.typeExpr;
 
@@ -418,7 +440,8 @@ exp	: exp '+' exp		{
                     int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
 
                     if (!both_bools) {
-                      printf("\n***Error: types of operands for operation %s do not match\n", "AND");
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "AND"); 
+                      yyerror(ErrorBuffer);
                     } else { 
                       int newReg = NextRegister();
                       $$.typeExpr = $1.typeExpr;
@@ -439,7 +462,8 @@ exp	: exp '+' exp		{
                     int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
 
                     if (!both_bools) {
-                      printf("\n***Error: types of operands for operation %s do not match\n", "OR");
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "OR"); 
+                      yyerror(ErrorBuffer);
                     } else { 
                       int newReg = NextRegister();
 
@@ -460,7 +484,8 @@ exp	: exp '+' exp		{
   | ID	{ 
           SymTabEntry* entry = lookup($1.str);
           if (entry == NULL) {
-            printf("\n***Error: undeclared identifier %s\n", $1.str);
+            sprintf(ErrorBuffer, "\n***Error: undeclared identifier %s\n", $1.str);
+            yyerror(ErrorBuffer);
           } else {
             sprintf(
               CommentBuffer, 
@@ -481,7 +506,13 @@ exp	: exp '+' exp		{
   | ID '[' exp ']'	{
                       SymTabEntry *entry = lookup($1.str);
                       if (entry == NULL) {
-                        printf("\n***Error: undeclared identifier %s\n", $1.str);
+                        sprintf(ErrorBuffer, "***Error: undeclared identifier %s\n", $1.str);
+                        yyerror(ErrorBuffer);
+                      } else if ($3.typeExpr.type != TYPE_INT) {
+                        yyerror("\n***Error: subscript exp not type integer\n");
+                      } else if (entry->typeExpr.type != TYPE_INT_ARRAY && entry->typeExpr.type != TYPE_BOOL_ARRAY) {
+                        sprintf(ErrorBuffer, "\n***Error: id %s is not an array\n", entry->name);
+                        yyerror(ErrorBuffer);
                       } else {
                         sprintf(
                           CommentBuffer, 
@@ -541,7 +572,12 @@ ctrlexp	: ID ASG ICONST ',' ICONST
     { 
       SymTabEntry* entry = lookup($1.str);
       if (entry == NULL) {
-        printf("\n***Error: undeclared identifier %s\n", $1.str);
+        sprintf(ErrorBuffer, "\n***Error: undeclared identifier %s\n", $1.str);
+        yyerror(ErrorBuffer);
+      } else if ($3.num > $5.num) {
+        yyerror("\n***Error: lower bound exceeds upper bound\n");
+      } else if (entry->typeExpr.type != TYPE_INT) {
+        yyerror("\n***Error: induction variable not scalar integer variable\n");
       } else {
         int newReg1 = NextRegister(); 
         int newReg2 = NextRegister(); 
@@ -574,51 +610,90 @@ ctrlexp	: ID ASG ICONST ',' ICONST
         ;
 
 condexp	: exp NEQ exp		{
-                          int reg1 = NextRegister();
-                          emit(NOLABEL, CMPNE, $1.targetRegister, $3.targetRegister, reg1);
+                          int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                          int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
+                          if (!both_bools && !both_ints) {
+                            sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "!=");
+                            yyerror(ErrorBuffer);
+                          } else {
+                            int reg1 = NextRegister();
+                            
+                            emit(NOLABEL, CMPNE, $1.targetRegister, $3.targetRegister, reg1);
 
-                          $$.typeExpr.type = TYPE_BOOL;
-                          $$.targetRegister = reg1;
+                            $$.typeExpr.type = TYPE_BOOL;
+                            $$.targetRegister = reg1;
+                          }
                         } 
 
   | exp EQ exp		{
-                    int reg1 = NextRegister();
-                    emit(NOLABEL, CMPEQ, $1.targetRegister, $3.targetRegister, reg1);
+                    int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                    int both_bools = $1.typeExpr.type == TYPE_BOOL && $3.typeExpr.type == TYPE_BOOL;
+                    if (!both_bools && !both_ints) {
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "==");
+                      yyerror(ErrorBuffer);
+                    } else {
+                      int reg1 = NextRegister();
+                      emit(NOLABEL, CMPEQ, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.typeExpr.type = TYPE_BOOL;
-                    $$.targetRegister = reg1;
+                      $$.typeExpr.type = TYPE_BOOL;
+                      $$.targetRegister = reg1;
+                    }
                   }
 
   | exp LT exp		{  
-                    int reg1 = NextRegister();
-                    emit(NOLABEL, CMPLT, $1.targetRegister, $3.targetRegister, reg1);
+                    int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                    if (!both_ints) {
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "<");
+                      yyerror(ErrorBuffer);
+                    } else {
+                      int reg1 = NextRegister();
+                      emit(NOLABEL, CMPLT, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.typeExpr.type = TYPE_BOOL;
-                    $$.targetRegister = reg1;
+                      $$.typeExpr.type = TYPE_BOOL;
+                      $$.targetRegister = reg1;
+                    }
                   }
 
   | exp LEQ exp		{
-                    int reg1 = NextRegister();
-                    emit(NOLABEL, CMPLE, $1.targetRegister, $3.targetRegister, reg1);
+                    int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                    if (!both_ints) {
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", "<=");
+                      yyerror(ErrorBuffer);
+                    } else {
+                      int reg1 = NextRegister();
+                      emit(NOLABEL, CMPLE, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.typeExpr.type = TYPE_BOOL;
-                    $$.targetRegister = reg1;
+                      $$.typeExpr.type = TYPE_BOOL;
+                      $$.targetRegister = reg1;
+                    }
                   }
 
 	| exp GT exp		{ 
-                    int reg1 = NextRegister();
-                    emit(NOLABEL, CMPGT, $1.targetRegister, $3.targetRegister, reg1);
+                    int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                    if (!both_ints) {
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", ">");
+                      yyerror(ErrorBuffer);
+                    } else {
+                      int reg1 = NextRegister();
+                      emit(NOLABEL, CMPGT, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.typeExpr.type = TYPE_BOOL;
-                    $$.targetRegister = reg1;
+                      $$.typeExpr.type = TYPE_BOOL;
+                      $$.targetRegister = reg1;
+                    }
                   }
 
 	| exp GEQ exp		{ 
-                    int reg1 = NextRegister();
-                    emit(NOLABEL, CMPGE, $1.targetRegister, $3.targetRegister, reg1);
+                    int both_ints = $1.typeExpr.type == TYPE_INT && $3.typeExpr.type == TYPE_INT;
+                    if (!both_ints) {
+                      sprintf(ErrorBuffer, "\n***Error: types of operands for operation %s do not match\n", ">=");
+                      yyerror(ErrorBuffer);
+                    } else {
+                      int reg1 = NextRegister();
+                      emit(NOLABEL, CMPGE, $1.targetRegister, $3.targetRegister, reg1);
 
-                    $$.typeExpr.type = TYPE_BOOL;
-                    $$.targetRegister = reg1;
+                      $$.typeExpr.type = TYPE_BOOL;
+                      $$.targetRegister = reg1;
+                    }
                   }
 
 	| error { yyerror("***Error: illegal conditional expression\n");}  
@@ -641,7 +716,9 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  CommentBuffer = (char *) malloc(1961);  
+  CommentBuffer = (char *) malloc(1961); 
+  ErrorBuffer = (char *) malloc(1000);
+  
   InitSymbolTable();
 
   printf("1\t");
