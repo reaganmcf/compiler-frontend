@@ -75,13 +75,6 @@ vardcls	: vardcls vardcl ';' { }
 	;
 
 vardcl	: idlist ':' type {
-                            //sprintf(CommentBuffer, "idlist has the following members:");
-                            //emitComment(CommentBuffer);
-                            //for(int i = 0; i < $1.count; i++) {
-                            //  sprintf(CommentBuffer, "\t%s", $1.ids[i]);
-                            //  emitComment(CommentBuffer);
-                            //}
-
                             // For each id - add an entry in the lookup table
                             int offset_size = 1;
                             if ($3.type == TYPE_INT_ARRAY || $3.type == TYPE_BOOL_ARRAY) {
@@ -225,13 +218,6 @@ fstmt	: FOR ctrlexp {
                       $1.cmp_label = cmp_branch;
                       $1.break_label = break_branch;
 
-                      //sprintf(CommentBuffer, "cmp = %d, body = %d, break = %d",
-                      //  $$.cmp_label,
-                      //  $$.body_label,
-                      //  $$.break_label
-                      //);
-                      //emitComment(CommentBuffer);
-
                       int reg1 = NextRegister();
                       int reg2 = NextRegister();
                       // upper bound reg hasn't been created yet, but it's always 3 more than this one
@@ -317,8 +303,6 @@ astmt : lhs ASG exp  {
 	;
 
 lhs	: ID	{           
-            //sprintf(CommentBuffer, "looking up %s", $1.str);
-            //emitComment(CommentBuffer);
             SymTabEntry *entry = lookup($1.str);
             if (entry == NULL) {
               printf("\n***Error: undeclared identifier %s\n", $1.str);
@@ -597,7 +581,13 @@ condexp	: exp NEQ exp		{
                           $$.targetRegister = reg1;
                         } 
 
-  | exp EQ exp		{  }
+  | exp EQ exp		{
+                    int reg1 = NextRegister();
+                    emit(NOLABEL, CMPEQ, $1.targetRegister, $3.targetRegister, reg1);
+
+                    $$.typeExpr.type = TYPE_BOOL;
+                    $$.targetRegister = reg1;
+                  }
 
   | exp LT exp		{  
                     int reg1 = NextRegister();
@@ -615,9 +605,21 @@ condexp	: exp NEQ exp		{
                     $$.targetRegister = reg1;
                   }
 
-	| exp GT exp		{  }
+	| exp GT exp		{ 
+                    int reg1 = NextRegister();
+                    emit(NOLABEL, CMPGT, $1.targetRegister, $3.targetRegister, reg1);
 
-	| exp GEQ exp		{  }
+                    $$.typeExpr.type = TYPE_BOOL;
+                    $$.targetRegister = reg1;
+                  }
+
+	| exp GEQ exp		{ 
+                    int reg1 = NextRegister();
+                    emit(NOLABEL, CMPGE, $1.targetRegister, $3.targetRegister, reg1);
+
+                    $$.typeExpr.type = TYPE_BOOL;
+                    $$.targetRegister = reg1;
+                  }
 
 	| error { yyerror("***Error: illegal conditional expression\n");}  
   ;
